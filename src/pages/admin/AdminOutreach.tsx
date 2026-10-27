@@ -83,7 +83,8 @@ export function parseAudience(raw: string) {
 export default function AdminOutreach() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Partial<Campaign> | null>(null);
-  const [preset, setPreset] = useState<AudienceRow[]>([]);
+  const [, setPreset] = useState<AudienceRow[]>([]);
+  const [followCsv, setFollowCsv] = useState("");
   const [followFor, setFollowFor] = useState<Campaign | null>(null);
   const [selected, setSelected] = useState<string>("");
 
@@ -169,6 +170,7 @@ export default function AdminOutreach() {
                       {(c.status === "draft" || c.status === "failed") && <Button size="sm" onClick={() => act(launchOutreachCampaign, c.id, "Campaign launched — sending in the background")}><Send className="h-3.5 w-3.5 mr-1" />Launch</Button>}
                       {c.status === "sending" && <Button size="sm" variant="secondary" onClick={() => act(pauseOutreachCampaign, c.id, "Campaign paused")}><Pause className="h-3.5 w-3.5 mr-1" />Pause</Button>}
                       {c.status === "paused" && <Button size="sm" onClick={() => act(resumeOutreachCampaign, c.id, "Campaign resumed")}><Play className="h-3.5 w-3.5 mr-1" />Resume</Button>}
+                      {c.sent_count > 0 && c.status !== "sending" && <Button size="sm" variant="outline" onClick={() => setFollowFor(c)}><Reply className="h-3.5 w-3.5 mr-1" />Follow up</Button>}
                       <Button size="icon" variant="ghost" title="View recipients" onClick={() => setSelected(c.id)}><Eye className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" title="Duplicate" onClick={() => duplicate(c)}><Copy className="h-4 w-4" /></Button>
                       {c.status !== "sending" && <Button size="icon" variant="ghost" title="Delete" onClick={() => remove(c)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
