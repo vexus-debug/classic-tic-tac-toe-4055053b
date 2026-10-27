@@ -13,6 +13,18 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    version: "v2.2.0",
+    date: "October 27, 2026",
+    title: "Outreach contacts and follow-ups",
+    kind: "feature",
+    items: [
+      { kind: "feature", text: "New Contacts tab in Email Outreach: a permanent contact list with search, filters, spreadsheet import, tags, bulk actions and per-contact campaign history." },
+      { kind: "feature", text: "Contact statuses update on their own as emails are sent, opened, clicked, bounced or unsubscribed." },
+      { kind: "feature", text: "Pick campaign recipients straight from Contacts by status, tag or clinic type." },
+      { kind: "feature", text: "New Follow up button on sent campaigns: target people who did not open, opened but did not click, or did not click." },
+    ],
+  },
+  {
     version: "v2.1.1",
     date: "October 27, 2026",
     title: "Email key kept in your own database",
