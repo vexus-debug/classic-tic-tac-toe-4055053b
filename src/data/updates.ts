@@ -13,6 +13,16 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    version: "v2.2.1",
+    date: "October 27, 2026",
+    title: "Pricing and footer touch-ups",
+    kind: "improvement",
+    items: [
+      { kind: "improvement", text: "Dental setup fee range updated to ₦30,000–₦100,000 depending on clinic size, across the dental industry and pricing pages." },
+      { kind: "improvement", text: "Removed the social media icons from the website footer." },
+    ],
+  },
+  {
     version: "v2.2.0",
     date: "October 27, 2026",
     title: "Outreach contacts and follow-ups",
