@@ -186,7 +186,8 @@ export default function AdminOutreach() {
         <TabsContent value="blocklist"><BlocklistTab /></TabsContent>
       </Tabs>
 
-      {editing && <CampaignStudio initial={editing} onClose={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["outreach-campaigns"] }); }} />}
+      {editing && <CampaignStudio initial={editing} initialAudience={followCsv} onClose={() => { setEditing(null); setFollowCsv(""); qc.invalidateQueries({ queryKey: ["outreach-campaigns"] }); }} />}
+      {followFor && <FollowUpDialog campaign={followFor} onClose={() => setFollowFor(null)} onCreate={(c, csv) => { setFollowFor(null); setFollowCsv(csv); setEditing(c); }} />}
       {selected && <RecipientsDialog campaignId={selected} onClose={() => setSelected("")} />}
     </div>
   );
