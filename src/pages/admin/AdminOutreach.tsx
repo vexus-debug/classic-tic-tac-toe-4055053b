@@ -190,10 +190,103 @@ export default function AdminOutreach() {
   );
 }
 
-function CampaignStudio({ initial, onClose }: { initial: Partial<Campaign>; onClose: () => void }) {
+const csvCell = (v: unknown) => String(v ?? "").replace(/[,;\t\r\n"]/g, " ").trim();
+/** Builds audience CSV text (email,name,clinic_name,city) for the campaign builder. */
+export function rowsToCsv(rows: { email: string; name?: string | null; clinic_name?: string | null; city?: string | null }[]) {
+  return ["email,name,clinic_name,city", ...rows.map((r) => [r.email, r.name, r.clinic_name, r.city].map(csvCell).join(","))].join("\n");
+}
+function mergeCsv(prev: string, csv: string) {
+  if (!prev.trim()) return csv;
+  const prevHasHeader = /email/i.test(prev.split(/\r?\n/)[0] ?? "");
+  const body = csv.split("\n").slice(1).join("\n");
+  return prevHasHeader ? `${prev.trimEnd()}\n${body}` : `${csv.split("\n")[0]}\n${prev.trim()}\n${body}`;
+}
+
+/** Contacts the picker would add: never unsubscribed or bounced. */
+export function pickContacts(contacts: { status: string; tags: string[] | null; specialty: string | null }[], status: string, tag: string, specialty: string) {
+  return contacts.filter((c) => !["unsubscribed", "bounced"].includes(c.status) &&
+    (status === "all" || c.status === status) && (tag === "all" || (c.tags ?? []).includes(tag)) &&
+    (specialty === "all" || c.specialty === specialty));
+}
+
+function ContactPicker({ onAdd }: { onAdd: (csv: string) => void }) {
+  const { data: contacts = [] } = useQuery(contactsQuery);
+  const [status, setStatus] = useState("new");
+  const [tag, setTag] = useState("all");
+  const [specialty, setSpecialty] = useState("all");
+  const allTags = useMemo(() => [...new Set(contacts.flatMap((c) => c.tags ?? []))].sort(), [contacts]);
+  const matches = pickContacts(contacts, status, tag, specialty);
+  return (
+    <div className="rounded-md border p-3 space-y-2">
+      <p className="text-sm font-medium flex items-center gap-1"><Users className="h-4 w-4" />Add from Contacts</p>
+      <div className="flex flex-wrap gap-2 items-center">
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Any status</SelectItem>{CONTACT_STATUSES.filter((s) => s !== "unsubscribed" && s !== "bounced").map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={tag} onValueChange={setTag}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Any tag</SelectItem>{allTags.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={specialty} onValueChange={setSpecialty}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Any clinic type</SelectItem>{SPECIALTIES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.replace("_", " ")}</SelectItem>)}</SelectContent>
+        </Select>
+        <Button size="sm" disabled={!matches.length} onClick={() => onAdd(rowsToCsv(matches.map((c: any) => ({ email: c.email, name: [c.first_name, c.last_name].filter(Boolean).join(" "), clinic_name: c.clinic_name, city: c.city }))))}>
+          Add {matches.length} contact(s)
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function FollowUpDialog({ campaign, onClose, onCreate }: { campaign: Campaign; onClose: () => void; onCreate: (c: Partial<Campaign>, csv: string) => void }) {
+  const [rule, setRule] = useState<FollowRule>("no_open");
+  const [days, setDays] = useState(3);
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["outreach-followup-src", campaign.id],
+    queryFn: async () => {
+      const out: any[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data } = await db.from("outreach_recipients").select("recipient_email,recipient_name,clinic_name,metadata,status,open_count,click_count,sent_at").eq("campaign_id", campaign.id).range(from, from + 999);
+        out.push(...(data ?? [])); if (!data || data.length < 1000) break;
+      }
+      return out;
+    },
+  });
+  const picks = pickFollowUpRecipients(rows, rule, days);
+  const create = () => {
+    const { id, status, created_at, ...rest } = campaign; void status; void created_at;
+    onCreate({ ...rest, name: `${campaign.name} — follow-up`, subject: `Re: ${campaign.subject}`, parent_campaign_id: id },
+      rowsToCsv(picks.map((r) => ({ email: r.recipient_email, name: r.recipient_name, clinic_name: r.clinic_name, city: r.metadata?.city }))));
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Follow up on “{campaign.name}”</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label>Send to people who…</Label>
+            <Select value={rule} onValueChange={(v) => setRule(v as FollowRule)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{(Object.keys(FOLLOW_UP_RULES) as FollowRule[]).map((k) => <SelectItem key={k} value={k}>{FOLLOW_UP_RULES[k].label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Sent at least this many days ago</Label><Input type="number" min={0} value={days} onChange={(e) => setDays(Math.max(0, Number(e.target.value) || 0))} /></div>
+          <p className="text-sm">{isLoading ? "Counting…" : <><b>{picks.length}</b> recipient(s) match. Bounced and unsubscribed people are left out.</>}</p>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button disabled={!picks.length} onClick={create}><Reply className="h-4 w-4 mr-1" />Create follow-up</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CampaignStudio({ initial, initialAudience, onClose }: { initial: Partial<Campaign>; initialAudience?: string; onClose: () => void }) {
   const [step, setStep] = useState(0);
   const [c, setC] = useState<Partial<Campaign>>(initial);
-  const [audienceRaw, setAudienceRaw] = useState("");
+  const [audienceRaw, setAudienceRaw] = useState(initialAudience ?? "");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [testEmail, setTestEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -262,16 +355,21 @@ function CampaignStudio({ initial, onClose }: { initial: Partial<Campaign>; onCl
         const { error } = await db.from("outreach_campaigns").update(payload).eq("id", id); if (error) throw error;
       } else {
         const { data: u } = await supabase.auth.getUser();
-        const { data, error } = await db.from("outreach_campaigns").insert({ ...payload, status: "draft", created_by: u.user?.id }).select("id").single();
+        const { data, error } = await db.from("outreach_campaigns").insert({ ...payload, status: "draft", created_by: u.user?.id, parent_campaign_id: c.parent_campaign_id ?? null }).select("id").single();
         if (error) throw error; id = data.id as string; setSavedId(id);
       }
       if (sendable.length) {
-        const known = core(c);
+        const contactIds = new Map<string, string>();
+        const emails = sendable.map((r) => r.email.toLowerCase());
+        for (let i = 0; i < emails.length; i += 200) {
+          const { data } = await db.from("outreach_contacts").select("id,email").in("email", emails.slice(i, i + 200));
+          for (const r of data ?? []) contactIds.set(String(r.email).toLowerCase(), r.id);
+        }
         const rows = sendable.map((r) => {
           const { email, name, first_name, clinic_name, ...meta } = r;
-          return { campaign_id: id, recipient_email: email.toLowerCase(), recipient_name: name || first_name || null, clinic_name: clinic_name || null, metadata: meta, status: "pending" };
+          const e = email.toLowerCase();
+          return { campaign_id: id, contact_id: contactIds.get(e) ?? null, recipient_email: e, recipient_name: name || first_name || null, clinic_name: clinic_name || null, metadata: meta, status: "pending" };
         });
-        void known;
         for (let i = 0; i < rows.length; i += 500) {
           const { error } = await db.from("outreach_recipients").insert(rows.slice(i, i + 500)); if (error) throw error;
         }
@@ -323,7 +421,8 @@ function CampaignStudio({ initial, onClose }: { initial: Partial<Campaign>; onCl
 
         {step === 1 && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Paste a CSV with a header row (email, name, clinic_name, city…) or one email per line. Extra columns become merge tags.</p>
+            <ContactPicker onAdd={(csv) => setAudienceRaw((prev) => mergeCsv(prev, csv))} />
+            <p className="text-sm text-muted-foreground">Or paste a CSV with a header row (email, name, clinic_name, city…) or one email per line. Extra columns become merge tags.</p>
             <Input type="file" accept=".csv,text/csv,text/plain" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setAudienceRaw(await f.text()); }} />
             <Textarea rows={8} value={audienceRaw} onChange={(e) => setAudienceRaw(e.target.value)} placeholder={"email,name,clinic_name,city\nada@clinic.ng,Ada Obi,Bright Smile Dental,Lagos"} className="font-mono text-xs" />
             <div className="flex flex-wrap gap-2 text-sm">
