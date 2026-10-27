@@ -7,7 +7,7 @@ import CaseCalculator from "@/site/components/CaseCalculator";
 const WHATSAPP = "https://wa.me/2349017758165?text=Hello%20I%20would%20like%20to%20know%20more%20about%20Clinexus%20dental%20pricing";
 
 const rows = [
-  { label: "Setup (one time)", value: "₦30,000 – ₦50,000", note: "Based on branches, chairs and staff" },
+  { label: "Setup (one time)", value: "₦30,000 – ₦100,000", note: "Based on clinic size, branches, chairs and staff" },
   { label: "Per patient case", value: "₦1,000", note: "30 days, up to 3 visits" },
   { label: "Free at signup", value: "10 cases", note: "Credits never expire" },
   { label: "Monthly fee", value: "₦0", note: "No subscription, no tiers" },

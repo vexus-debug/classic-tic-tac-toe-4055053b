@@ -35,7 +35,7 @@ const faqs = [
   { q: "Do credits expire?", a: "No. Credits last indefinitely until you use them." },
   { q: "What happens at zero credits?", a: "Old records stay open, but new cases are blocked until you top up. The wallet turns red below 5 credits." },
   { q: "Do I get a credit back if I delete a visit?", a: "No. Deleting or cancelling a visit does not return the credit." },
-  { q: "Is there a monthly subscription too?", a: "No. Only the one-time setup fee (₦30,000–₦50,000) and ₦1,000 per case." },
+  { q: "Is there a monthly subscription too?", a: "No. Only the one-time setup fee (₦30,000–₦100,000, depending on clinic size) and ₦1,000 per case." },
 ];
 
 const DentalCasesExplained = () => (

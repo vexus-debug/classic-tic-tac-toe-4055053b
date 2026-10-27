@@ -190,7 +190,7 @@ const DentalClinics = () => {
             <div className="mx-auto mb-12 grid max-w-3xl gap-6 text-left md:grid-cols-2">
               <div className="rounded-2xl bg-background/50 p-6">
                 <p className="text-sm font-medium text-muted-foreground">One-time setup fee</p>
-                <p className="mt-2 text-3xl font-bold text-primary">₦30,000 – ₦50,000</p>
+                <p className="mt-2 text-3xl font-bold text-primary">₦30,000 – ₦100,000</p>
                 <p className="mt-3 text-sm text-muted-foreground">Depends on your clinic size. Paid once.</p>
               </div>
               <div className="eye-panel-accent rounded-2xl p-6">
